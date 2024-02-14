@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zip File Manager</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    #zipContents {
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    .download-link {
+      display: block;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Zip File Manager</h1>
+  
+  <h2>Create Zip File</h2>
+  <input type="file" id="fileInput" multiple>
+  <button onclick="createZip()">Create Zip</button>
+  <a href="#" id="downloadLink" style="display:none;">Download Zip</a>
+
+  <h2>Open Zip File</h2>
+  <input type="file" id="zipInput">
+  <button onclick="openZip()">Open Zip</button>
+  
+  <div id="zipContents"></div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
+  <script>
+    function createZip() {
+      const files = document.getElementById('fileInput').files;
+      if (files.length === 0) {
+        alert('Please select files to create a zip.');
+        return;
+      }
+
+      const zip = new JSZip();
+      const promises = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        promises.push(zip.file(file.name, file));
+      }
+
+      Promise.all(promises).then(() => {
+        zip.generateAsync({ type: 'blob' })
+          .then(function(content) {
+            const downloadLink = document.getElementById('downloadLink');
+            downloadLink.href = URL.createObjectURL(content);
+            downloadLink.download = 'files.zip';
+            downloadLink.style.display = 'block';
+          });
+      });
+    }
+
+    function openZip() {
+      const file = document.getElementById('zipInput').files[0];
+      if (!file) {
+        alert('Please select a zip file to open.');
+        return;
+      }
+
+      const zip = new JSZip();
+      zip.loadAsync(file)
+        .then(function(zipContents) {
+          const contentDiv = document.getElementById('zipContents');
+          contentDiv.innerHTML = '<h3>Zip file contents:</h3>';
+          Object.keys(zipContents.files).forEach(function(filename) {
+            const link = document.createElement('a');
+            link.href = '#';
+            link.textContent = filename;
+            link.className = 'download-link';
+            link.onclick = function() {
+              zipContents.files[filename].async('blob').then(function(fileData) {
+                saveAs(fileData, filename);
+              });
+              return false;
+            };
+            contentDiv.appendChild(link);
+          });
+          alert('Zip file opened successfully.');
+        })
+        .catch(function(error) {
+          console.error('Error opening zip file:', error);
+          alert('Error opening zip file. Check the console for details.');
+        });
+    }
+  </script>
+</body>
+</html>
